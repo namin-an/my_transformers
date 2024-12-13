@@ -1194,13 +1194,8 @@ class CLIPVisionModel(CLIPPreTrainedModel):
         
 @add_start_docstrings(CLIP_START_DOCSTRING)
 class CustomCLIPModel(CLIPModel):
-    def forward(self, input_ids=None, attention_mask=None, pixel_values=None, sim_type=None, **kwargs):
-        # You can use `custom_key` in whatever way you want
-        if custom_key is not None:
-            print(f"Custom key received: {custom_key}")
-        
-        # Call the parent `forward()` method with the standard arguments
-        return super().forward(input_ids=input_ids, attention_mask=attention_mask, pixel_values=pixel_values, **kwargs)
+    def forward(self, input_ids=None, attention_mask=None, pixel_values=None, sim_type=None, **kwargs):        
+        return super().forward(input_ids=input_ids, attention_mask=attention_mask, pixel_values=pixel_values, sim_type=None, **kwargs)
 
 @add_start_docstrings(CLIP_START_DOCSTRING)
 class CLIPModel(CLIPPreTrainedModel):
@@ -1283,6 +1278,7 @@ class CLIPModel(CLIPPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type
         )
 
         pooled_output = text_outputs[1]

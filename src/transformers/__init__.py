@@ -1740,6 +1740,7 @@ else:
         [
             "CLIPForImageClassification",
             "CLIPModel",
+            "CLIPCustomModel",
             "CLIPPreTrainedModel",
             "CLIPTextModel",
             "CLIPTextModelWithProjection",
