@@ -1191,12 +1191,7 @@ class CLIPVisionModel(CLIPPreTrainedModel):
             return_dict=return_dict,
             interpolate_pos_encoding=interpolate_pos_encoding,
         )
-        
-@add_start_docstrings(CLIP_START_DOCSTRING)
-class CustomCLIPModel(CLIPModel):
-    def forward(self, input_ids=None, attention_mask=None, pixel_values=None, sim_type=None, **kwargs):        
-        return super().forward(input_ids=input_ids, attention_mask=attention_mask, pixel_values=pixel_values, sim_type=None, **kwargs)
-
+       
 @add_start_docstrings(CLIP_START_DOCSTRING)
 class CLIPModel(CLIPPreTrainedModel):
     config_class = CLIPConfig
