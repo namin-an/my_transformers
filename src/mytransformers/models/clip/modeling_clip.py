@@ -318,10 +318,10 @@ class CLIPAttention(nn.Module):
     def forward(
         self,
         hidden_states: torch.Tensor,
+        sim_type: str,
         attention_mask: Optional[torch.Tensor] = None,
         causal_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
-        sim_type: Optional[str] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Input shape: Batch x Time x Channel"""
 
@@ -363,22 +363,22 @@ class CLIPAttention(nn.Module):
                 )
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
-
+            
         if sim_type == 'sigmoid_wo_norm':
-            attn_weights = torch.sigmoid(attn_weight)
+            attn_weights = torch.sigmoid(attn_weights)
         elif sim_type == 'elu_wo_norm':
-            attn_weights = nn.functional.elu(attn_weight) + 1.0
+            attn_weights = nn.functional.elu(attn_weights) + 1.0
         elif sim_type == 'softmax_wo_norm':
             pass
         elif sim_type == 'sigmoid':
-            attn_weights = torch.sigmoid(attn_weight)
+            attn_weights = torch.sigmoid(attn_weights)
             attn_weights = nn.functional.softmax(attn_weights, dim=-1)
         elif sim_type == 'elu':
-            attn_weights = nn.functional.elu(attn_weight) + 1.0
+            attn_weights = nn.functional.elu(attn_weights) + 1.0
             attn_weights = nn.functional.softmax(attn_weights, dim=-1)
         else:
             attn_weights = nn.functional.softmax(attn_weights, dim=-1)
-
+        
         if output_attentions:
             # this operation is a bit akward, but it's required to
             # make sure that attn_weights keeps its gradient.
@@ -510,6 +510,7 @@ class CLIPSdpaAttention(CLIPAttention):
         attention_mask: Optional[torch.Tensor] = None,
         causal_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
+        sim_type: Optional[str] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         if output_attentions:
             # TODO: Improve this warning with e.g. `model.config.attn_implementation = "manual"` once this is implemented.
@@ -524,6 +525,7 @@ class CLIPSdpaAttention(CLIPAttention):
                 attention_mask=attention_mask,
                 causal_attention_mask=causal_attention_mask,
                 output_attentions=output_attentions,
+                sim_type=sim_type,
             )
 
         # CLIP text model uses both `causal_attention_mask` and `attention_mask`
@@ -606,6 +608,7 @@ class CLIPEncoderLayer(nn.Module):
         attention_mask: torch.Tensor,
         causal_attention_mask: torch.Tensor,
         output_attentions: Optional[bool] = False,
+        sim_type: Optional[str] = None,
     ) -> Tuple[torch.FloatTensor]:
         """
         Args:
@@ -625,6 +628,7 @@ class CLIPEncoderLayer(nn.Module):
             attention_mask=attention_mask,
             causal_attention_mask=causal_attention_mask,
             output_attentions=output_attentions,
+            sim_type=sim_type
         )
         hidden_states = residual + hidden_states
 
@@ -656,6 +660,7 @@ class CLIPPreTrainedModel(PreTrainedModel):
     def _init_weights(self, module):
         """Initialize the weights"""
         factor = self.config.initializer_factor
+        
         if isinstance(module, CLIPTextEmbeddings):
             module.token_embedding.weight.data.normal_(mean=0.0, std=factor * 0.02)
             module.position_embedding.weight.data.normal_(mean=0.0, std=factor * 0.02)
@@ -837,6 +842,7 @@ class CLIPEncoder(nn.Module):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None,
     ) -> Union[Tuple, BaseModelOutput]:
         r"""
         Args:
@@ -894,6 +900,7 @@ class CLIPEncoder(nn.Module):
                     attention_mask,
                     causal_attention_mask,
                     output_attentions=output_attentions,
+                    sim_type=sim_type
                 )
 
             hidden_states = layer_outputs[0]
@@ -974,6 +981,7 @@ class CLIPTextTransformer(nn.Module):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type
         )
 
         last_hidden_state = encoder_outputs[0]
@@ -1043,6 +1051,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
@@ -1070,6 +1079,7 @@ class CLIPTextModel(CLIPPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type,
         )
 
 
@@ -1093,6 +1103,7 @@ class CLIPVisionTransformer(nn.Module):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         interpolate_pos_encoding: Optional[bool] = False,
+        sim_type: Optional[str] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
@@ -1115,6 +1126,7 @@ class CLIPVisionTransformer(nn.Module):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type,
         )
 
         last_hidden_state = encoder_outputs[0]
@@ -1385,7 +1397,7 @@ class CLIPModel(CLIPPreTrainedModel):
             interpolate_pos_encoding=interpolate_pos_encoding,
             return_dict=return_dict,
         )
-
+      
         text_outputs = self.text_model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -1497,6 +1509,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type,
         )
 
         pooled_output = text_outputs[1]
