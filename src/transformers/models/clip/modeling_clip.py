@@ -1191,7 +1191,16 @@ class CLIPVisionModel(CLIPPreTrainedModel):
             return_dict=return_dict,
             interpolate_pos_encoding=interpolate_pos_encoding,
         )
-
+        
+@add_start_docstrings(CLIP_START_DOCSTRING)
+class CustomCLIPModel(CLIPModel):
+    def forward(self, input_ids=None, attention_mask=None, pixel_values=None, sim_type=None, **kwargs):
+        # You can use `custom_key` in whatever way you want
+        if custom_key is not None:
+            print(f"Custom key received: {custom_key}")
+        
+        # Call the parent `forward()` method with the standard arguments
+        return super().forward(input_ids=input_ids, attention_mask=attention_mask, pixel_values=pixel_values, **kwargs)
 
 @add_start_docstrings(CLIP_START_DOCSTRING)
 class CLIPModel(CLIPPreTrainedModel):
@@ -1345,7 +1354,7 @@ class CLIPModel(CLIPPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
-        sim_type: Optional[str] = None
+        sim_type: Optional[str] = None,
     ) -> Union[Tuple, CLIPOutput]:
         r"""
         Returns:
