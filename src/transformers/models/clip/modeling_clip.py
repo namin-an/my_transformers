@@ -321,6 +321,7 @@ class CLIPAttention(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         causal_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
+        sim_type: Optional[str] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Input shape: Batch x Time x Channel"""
 
@@ -363,7 +364,20 @@ class CLIPAttention(nn.Module):
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len) + attention_mask
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        if sim_type == 'sigmoid_wo_norm':
+            attn_weights = torch.sigmoid(attn_weight)
+        elif sim_type == 'elu_wo_norm':
+            attn_weights = nn.functional.elu(attn_weight) + 1.0
+        elif sim_type == 'softmax_wo_norm':
+            pass
+        elif sim_type == 'sigmoid':
+            attn_weights = torch.sigmoid(attn_weight)
+            attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        elif sim_type == 'elu':
+            attn_weights = nn.functional.elu(attn_weight) + 1.0
+            attn_weights = nn.functional.softmax(attn_weights, dim=-1)
+        else:
+            attn_weights = nn.functional.softmax(attn_weights, dim=-1)
 
         if output_attentions:
             # this operation is a bit akward, but it's required to
@@ -417,6 +431,7 @@ class CLIPFlashAttention2(CLIPAttention):
         attention_mask: Optional[torch.Tensor] = None,
         causal_attention_mask: Optional[torch.Tensor] = None,
         output_attentions: Optional[bool] = False,
+        sim_type: Optional[str] = None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         output_attentions = False
 
@@ -921,6 +936,7 @@ class CLIPTextTransformer(nn.Module):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None,
     ) -> Union[Tuple, BaseModelOutputWithPooling]:
         r"""
         Returns:
@@ -1226,6 +1242,7 @@ class CLIPModel(CLIPPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None
     ) -> torch.FloatTensor:
         r"""
         Returns:
@@ -1328,6 +1345,7 @@ class CLIPModel(CLIPPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         interpolate_pos_encoding: bool = False,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None
     ) -> Union[Tuple, CLIPOutput]:
         r"""
         Returns:
@@ -1375,6 +1393,7 @@ class CLIPModel(CLIPPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
+            sim_type=sim_type
         )
 
         image_embeds = vision_outputs[1]
@@ -1451,6 +1470,7 @@ class CLIPTextModelWithProjection(CLIPPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        sim_type: Optional[str] = None
     ) -> Union[Tuple, CLIPTextModelOutput]:
         r"""
         Returns:
